@@ -1,30 +1,8 @@
 {
-  "name": "vscode-stylelint",
-  "version": "1.4.0",
-  "license": "MIT",
-  "description": "Official Stylelint extension for Visual Studio Code",
-  "main": "dist/index.js",
+  "name": "@florian-sanders/vscode-stylelint-prebundled",
   "displayName": "Stylelint",
-  "publisher": "stylelint",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/stylelint/vscode-stylelint.git"
-  },
-  "homepage": "https://github.com/stylelint/vscode-stylelint#readme",
-  "bugs": "https://github.com/stylelint/vscode-stylelint/issues",
-  "qna": "https://stackoverflow.com/questions/tagged/vscode+stylelint",
-  "sponsor": {
-    "url": "https://opencollective.com/stylelint"
-  },
-  "icon": "media/stylelint.png",
-  "engines": {
-    "vscode": ">=1.82.3",
-    "node": ">=18.15.0"
-  },
-  "galleryBanner": {
-    "color": "#000000",
-    "theme": "dark"
-  },
+  "version": "1.4.0",
+  "description": "Official Stylelint extension for Visual Studio Code",
   "categories": [
     "Linters",
     "Snippets",
@@ -43,10 +21,51 @@
     "validation",
     "check"
   ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
+  "homepage": "https://github.com/florian-sanders/vscode-stylelint-prebundled#readme",
+  "bugs": "https://github.com/florian-sanders/vscode-stylelint-prebundled/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/florian-sanders/vscode-stylelint-prebundled.git"
+  },
+  "license": "MIT",
+  "qna": "https://stackoverflow.com/questions/tagged/vscode+stylelint",
+  "publisher": "stylelint",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.src.json",
+    "build-bundle-watch": "run:p build-watch bundle-watch",
+    "build-watch": "npm run build -- --watch",
+    "bundle": "npm run bundle-base -- --sourcemap",
+    "bundle-base": "ts-node --transpile-only -P tsconfig.scripts.json scripts/bundle.ts",
+    "bundle-watch": "npm run bundle-base -- --sourcemap --watch",
+    "build-bundle": "run-s build bundle",
+    "download-vscode": "ts-node --transpile-only -P tsconfig.scripts.json scripts/download-vscode.ts",
+    "format": "prettier . --write",
+    "lint": "run-s \"lint:*\"",
+    "lint:formatting": "prettier . --check",
+    "lint:js": "eslint .",
+    "lint:spelling": "cspell lint --no-progress",
+    "lint:types": "tsc -b",
+    "lint:unit-tests": "ts-node --transpile-only -P tsconfig.scripts.json scripts/enforce-unit-tests-per-file.ts",
+    "test": "npm run build-bundle && jest",
+    "test:e2e": "npm run build-bundle && jest --projects test/e2e",
+    "test:integration": "jest --projects test/integration",
+    "test:unit": "jest --projects test/unit",
+    "vscode:prepublish": "npm run build && npm run bundle-base -- --minify"
+  },
   "contributes": {
+    "commands": [
+      {
+        "title": "Fix all auto-fixable Problems",
+        "category": "Stylelint",
+        "command": "stylelint.executeAutofix"
+      },
+      {
+        "title": "Restart Stylelint Server",
+        "category": "Stylelint",
+        "command": "stylelint.restart"
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "Stylelint",
@@ -171,18 +190,6 @@
         }
       }
     },
-    "commands": [
-      {
-        "title": "Fix all auto-fixable Problems",
-        "category": "Stylelint",
-        "command": "stylelint.executeAutofix"
-      },
-      {
-        "title": "Restart Stylelint Server",
-        "category": "Stylelint",
-        "command": "stylelint.restart"
-      }
-    ],
     "jsonValidation": [
       {
         "fileMatch": "**/.stylelintrc*",
@@ -198,6 +205,10 @@
       }
     ]
   },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "prettier": "@stylelint/prettier-config",
   "dependencies": {
     "@types/triple-beam": "^1.3.5",
     "fast-diff": "^1.2.0",
@@ -249,31 +260,20 @@
     "typed-emitter": "^2.1.0",
     "typescript": "^4.9.5"
   },
-  "scripts": {
-    "build": "tsc -p tsconfig.src.json",
-    "build-bundle-watch": "run:p build-watch bundle-watch",
-    "build-watch": "npm run build -- --watch",
-    "bundle": "npm run bundle-base -- --sourcemap",
-    "bundle-base": "ts-node --transpile-only -P tsconfig.scripts.json scripts/bundle.ts",
-    "bundle-watch": "npm run bundle-base -- --sourcemap --watch",
-    "build-bundle": "run-s build bundle",
-    "download-vscode": "ts-node --transpile-only -P tsconfig.scripts.json scripts/download-vscode.ts",
-    "format": "prettier . --write",
-    "lint": "run-s \"lint:*\"",
-    "lint:formatting": "prettier . --check",
-    "lint:js": "eslint .",
-    "lint:spelling": "cspell lint --no-progress",
-    "lint:types": "tsc -b",
-    "lint:unit-tests": "ts-node --transpile-only -P tsconfig.scripts.json scripts/enforce-unit-tests-per-file.ts",
-    "test": "npm run build-bundle && jest",
-    "test:e2e": "npm run build-bundle && jest --projects test/e2e",
-    "test:integration": "jest --projects test/integration",
-    "test:unit": "jest --projects test/unit",
-    "vscode:prepublish": "npm run build && npm run bundle-base -- --minify"
+  "engines": {
+    "node": ">=18.15.0",
+    "vscode": ">=1.82.3"
   },
-  "prettier": "@stylelint/prettier-config",
   "volta": {
     "node": "18.15.0",
     "npm": "9.9.2"
+  },
+  "icon": "media/stylelint.png",
+  "galleryBanner": {
+    "color": "#000000",
+    "theme": "dark"
+  },
+  "sponsor": {
+    "url": "https://opencollective.com/stylelint"
   }
 }
