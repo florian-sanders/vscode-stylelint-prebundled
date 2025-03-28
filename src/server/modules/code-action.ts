@@ -151,6 +151,27 @@ export class CodeActionModule implements LanguageServerModule {
 			: undefined;
 	}
 
+	#getQuickFixActions(document: TextDocument, context: LSP.CodeActionContext): LSP.CodeAction[] {
+		const identifier = { uri: document.uri, version: document.version };
+		const actions: LSP.CodeAction[] = [];
+
+		for (const diagnostic of context.diagnostics) {
+			const edit = this.#context.getEditInfo(document, diagnostic);
+
+			if (edit) {
+				const action = LSP.CodeAction.create(
+					edit.label,
+					{ documentChanges: [LSP.TextDocumentEdit.create(identifier, [edit.edit])] },
+					LSP.CodeActionKind.QuickFix,
+				);
+
+				actions.push(action);
+			}
+		}
+
+		return actions;
+	}
+
 	#getAutoFixAllCommandAction(document: TextDocument): LSP.CodeAction {
 		const command = LSP.Command.create(
 			'Fix all Stylelint auto-fixable problems',
@@ -234,7 +255,10 @@ export class CodeActionModule implements LanguageServerModule {
 				const options = await this.#context.getOptions(document.uri);
 				const { location } = options.codeAction.disableRuleComment;
 
-				this.#logger?.debug('Creating disable rule for line code action', { rule: code, location });
+				this.#logger?.debug('Creating disable rule for line code action', {
+					rule: code,
+					location,
+				});
 
 				actions.get(code).disableLine = createDisableRuleLineCodeAction(
 					document,
@@ -243,19 +267,23 @@ export class CodeActionModule implements LanguageServerModule {
 				);
 
 				if (!actions.get(code).disableFile) {
-					this.#logger?.debug('Creating disable rule for file code action', { rule: code });
+					this.#logger?.debug('Creating disable rule for file code action', {
+						rule: code,
+					});
 
 					actions.get(code).disableFile = createDisableRuleFileCodeAction(document, diagnostic);
 				}
 			}
 
 			if (!actions.get(code).documentation) {
-				this.#logger?.debug('Creating documentation code action', { rule: code });
+				this.#logger?.debug('Creating documentation code action', {
+					rule: code,
+				});
 
 				actions.get(code).documentation = this.#getOpenRuleDocAction(diagnostic);
 			}
 		}
 
-		return [...actions];
+		return [...this.#getQuickFixActions(document, context), ...actions];
 	}
 }

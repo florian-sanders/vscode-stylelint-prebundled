@@ -1,7 +1,6 @@
 import { TextDocument, TextEdit } from 'vscode-languageserver-textdocument';
 import type { Connection, TextDocumentChangeEvent } from 'vscode-languageserver';
 import type LSP from 'vscode-languageserver-protocol';
-// eslint-disable-next-line n/no-missing-import
 import { TextDocuments } from 'vscode-languageserver/node';
 import {
 	DidChangeConfigurationNotification,
@@ -13,7 +12,7 @@ import {
 import type stylelint from 'stylelint';
 import type winston from 'winston';
 
-import { getFixes } from '../utils/documents/index';
+import { getFixes, getEditInfo } from '../utils/documents/index';
 import { displayError, CommandManager, NotificationManager } from '../utils/lsp/index';
 import { mergeAssign, mergeOptionsWithDefaults } from '../utils/objects/index';
 import { StylelintRunner, LintDiagnostics } from '../utils/stylelint/index';
@@ -132,11 +131,18 @@ export class StylelintLanguageServer implements Disposable {
 	#disposables: LSP.Disposable[] = [];
 
 	/**
+	 * Lint results.
+	 */
+	#lintResults = new Map<string, LintDiagnostics & { version: number }>();
+
+	/**
 	 * Creates a new Stylelint language server.
 	 */
 	constructor({ connection, logger, modules }: LanguageServerConstructorParameters) {
 		this.#connection = connection;
-		this.#logger = (logger ?? createLogger(connection))?.child({ component: 'language-server' });
+		this.#logger = (logger ?? createLogger(connection))?.child({
+			component: 'language-server',
+		});
 		this.#notifications = new NotificationManager(connection, this.#logger);
 		this.#commands = new CommandManager(connection, this.#logger);
 		this.#globalOptions = defaultOptions;
@@ -154,6 +160,7 @@ export class StylelintLanguageServer implements Disposable {
 			getFixes: this.#getFixes.bind(this),
 			displayError: this.#displayError.bind(this),
 			lintDocument: this.#lintDocument.bind(this),
+			getEditInfo: this.#getEditInfo.bind(this),
 			resolveStylelint: this.#resolveStylelint.bind(this),
 		};
 
@@ -205,6 +212,7 @@ export class StylelintLanguageServer implements Disposable {
 		}
 
 		// We only have a handful of states, so we can use a switch statement.
+		// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 		switch (this.#state) {
 			// We don't need to check State.New since the only invalid state
 			// transition from New is to Initialized, and the handler for
@@ -302,7 +310,10 @@ export class StylelintLanguageServer implements Disposable {
 
 		this.#scopedOptions.set(resource, withDefaults);
 
-		this.#logger.debug('Returning options', { resource, options: withDefaults });
+		this.#logger.debug('Returning options', {
+			resource,
+			options: withDefaults,
+		});
 
 		return withDefaults;
 	}
@@ -330,7 +341,10 @@ export class StylelintLanguageServer implements Disposable {
 			return result;
 		} catch (error) {
 			this.#displayError(error);
-			this.#logger.error('Error resolving Stylelint', { uri: document.uri, error });
+			this.#logger.error('Error resolving Stylelint', {
+				uri: document.uri,
+				error,
+			});
 
 			return undefined;
 		}
@@ -343,22 +357,37 @@ export class StylelintLanguageServer implements Disposable {
 		document: TextDocument,
 		linterOptions: Partial<stylelint.LinterOptions> = {},
 	): Promise<LintDiagnostics | undefined> {
-		this.#logger.debug('Linting document', { uri: document.uri, linterOptions });
+		this.#logger.debug('Linting document', {
+			uri: document.uri,
+			linterOptions,
+		});
 
 		try {
 			const options = await this.#getOptions(document.uri);
 
 			const results = await this.#runner.lintDocument(document, linterOptions, options);
 
+			this.#lintResults.set(document.uri, { version: document.version, ...results });
+
 			this.#logger.debug('Lint run complete', { uri: document.uri, results });
 
 			return results;
 		} catch (err) {
 			this.#displayError(err);
-			this.#logger.error('Error running lint', { uri: document.uri, error: err });
+			this.#logger.error('Error running lint', {
+				uri: document.uri,
+				error: err,
+			});
 
 			return undefined;
 		}
+	}
+
+	#getEditInfo(
+		document: TextDocument,
+		diagnostic: LSP.Diagnostic,
+	): { label: string; edit: TextEdit } | undefined {
+		return getEditInfo(document, diagnostic, this.#lintResults.get(document.uri));
 	}
 
 	/**
@@ -515,6 +544,7 @@ export class StylelintLanguageServer implements Disposable {
 		});
 
 		this.#scopedOptions.delete(document.uri);
+		this.#lintResults.delete(document.uri);
 	}
 
 	async #onDidChangeConfiguration(params: LSP.DidChangeConfigurationParams): Promise<void> {
@@ -539,7 +569,9 @@ export class StylelintLanguageServer implements Disposable {
 
 		Object.freeze(this.#globalOptions);
 
-		this.#logger.debug('Global options updated', { options: this.#globalOptions });
+		this.#logger.debug('Global options updated', {
+			options: this.#globalOptions,
+		});
 
 		this.#invokeHandlers('onDidChangeConfiguration');
 	}

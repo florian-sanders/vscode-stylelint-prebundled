@@ -8,7 +8,9 @@ describe('Initialization', () => {
 
 	beforeAll(() => {
 		connectionManager.initialize();
-		server = new StylelintLanguageServer({ connection: connectionManager.serverConnection });
+		server = new StylelintLanguageServer({
+			connection: connectionManager.serverConnection,
+		});
 		server.start();
 		connectionManager.clientProtocolConnection.listen();
 		connection = connectionManager.clientProtocolConnection;
@@ -28,15 +30,13 @@ describe('Initialization', () => {
 
 		const result = await connection.sendRequest(LSP.InitializeRequest.type, init);
 
-		expect(result).toMatchInlineSnapshot(`
-		Object {
-		  "capabilities": Object {
-		    "textDocumentSync": Object {
-		      "change": 1,
-		      "openClose": true,
-		    },
-		  },
-		}
-	`);
+		expect(result).toEqual({
+			capabilities: {
+				textDocumentSync: {
+					change: 1,
+					openClose: true,
+				},
+			},
+		});
 	});
 });

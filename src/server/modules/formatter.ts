@@ -87,14 +87,19 @@ export class FormatterModule implements LanguageServerModule {
 		);
 
 		const filter: LSP.DocumentFilter = { scheme, pattern };
-		const options: LSP.DocumentFormattingRegistrationOptions = { documentSelector: [filter] };
+		const options: LSP.DocumentFormattingRegistrationOptions = {
+			documentSelector: [filter],
+		};
 
 		this.#registrations.set(
 			document.uri,
 			this.#context.connection.client.register(LSP.DocumentFormattingRequest.type, options),
 		);
 
-		this.#logger?.debug('Registering formatter for document', { uri: document.uri, options });
+		this.#logger?.debug('Registering formatter for document', {
+			uri: document.uri,
+			options,
+		});
 
 		await this.#context.connection.sendNotification(
 			Notification.DidRegisterDocumentFormattingEditProvider,
@@ -112,9 +117,12 @@ export class FormatterModule implements LanguageServerModule {
 		this.#logger?.debug('Deregistering formatter for document', { uri });
 
 		registration
-			.then(({ dispose }) => dispose())
+			.then((d) => d.dispose())
 			.catch((error: unknown) => {
-				this.#logger?.error('Error deregistering formatter for document', { uri, error });
+				this.#logger?.error('Error deregistering formatter for document', {
+					uri,
+					error,
+				});
 			});
 
 		this.#registrations.delete(uri);
@@ -125,9 +133,12 @@ export class FormatterModule implements LanguageServerModule {
 			this.#logger?.debug('Deregistering formatter for document', { uri });
 
 			registration
-				.then(({ dispose }) => dispose())
+				.then((d) => d.dispose())
 				.catch((error: unknown) => {
-					this.#logger?.error('Error deregistering formatter for document', { uri, error });
+					this.#logger?.error('Error deregistering formatter for document', {
+						uri,
+						error,
+					});
 				});
 		}
 
@@ -137,7 +148,10 @@ export class FormatterModule implements LanguageServerModule {
 	onDidRegisterHandlers(): void {
 		this.#logger?.debug('Registering connection.onDocumentFormatting handler');
 		this.#context.connection.onDocumentFormatting(async ({ textDocument, options }) => {
-			this.#logger?.debug('Received onDocumentFormatting', { textDocument, options });
+			this.#logger?.debug('Received onDocumentFormatting', {
+				textDocument,
+				options,
+			});
 
 			if (!textDocument) {
 				this.#logger?.debug('No text document provided, ignoring');

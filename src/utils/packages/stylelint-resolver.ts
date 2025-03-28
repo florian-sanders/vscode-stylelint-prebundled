@@ -4,7 +4,6 @@ import path from 'path';
 import process from 'process';
 
 import type winston from 'winston';
-// eslint-disable-next-line n/no-missing-import
 import { Connection, Files } from 'vscode-languageserver/node';
 import { URI } from 'vscode-uri';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
@@ -76,7 +75,10 @@ export class StylelintResolver {
 					return pnpPath;
 				}
 			} catch (error) {
-				this.#logger?.debug('Did not find PnP loader at tested path', { path: pnpPath, error });
+				this.#logger?.debug('Did not find PnP loader at tested path', {
+					path: pnpPath,
+					error,
+				});
 			}
 		}
 
@@ -110,7 +112,7 @@ export class StylelintResolver {
 
 		if (!process.versions.pnp) {
 			try {
-				// eslint-disable-next-line @typescript-eslint/no-var-requires
+				// eslint-disable-next-line @typescript-eslint/no-require-imports
 				(require(pnpPath) as { setup: () => void }).setup();
 			} catch (error) {
 				this.#logger?.warn('Could not setup PnP', { path: pnpPath, error });
@@ -146,7 +148,10 @@ export class StylelintResolver {
 
 			return result;
 		} catch (error) {
-			this.#logger?.warn('Could not load Stylelint using PnP', { path: root, error });
+			this.#logger?.warn('Could not load Stylelint using PnP', {
+				path: root,
+				error,
+			});
 
 			return undefined;
 		}
@@ -165,7 +170,7 @@ export class StylelintResolver {
 			const stylelintPath = await Files.resolve('stylelint', globalModulesPath, cwd, trace);
 
 			const result = {
-				// eslint-disable-next-line @typescript-eslint/no-var-requires
+				// eslint-disable-next-line @typescript-eslint/no-require-imports
 				stylelint: require(stylelintPath) as Stylelint,
 				resolvedPath: stylelintPath,
 			};
@@ -176,7 +181,9 @@ export class StylelintResolver {
 
 			return result;
 		} catch (error) {
-			this.#logger?.warn('Could not load Stylelint from node_modules', { error });
+			this.#logger?.warn('Could not load Stylelint from node_modules', {
+				error,
+			});
 
 			return undefined;
 		}
@@ -219,7 +226,7 @@ export class StylelintResolver {
 		try {
 			const requirePath = await this.#getRequirePath(stylelintPath, getWorkspaceFolderFn);
 
-			// eslint-disable-next-line @typescript-eslint/no-var-requires
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
 			const stylelint = require(requirePath) as Stylelint;
 
 			if (stylelint && typeof stylelint.lint === 'function') {

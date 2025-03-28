@@ -1,7 +1,6 @@
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
 
-// eslint-disable-next-line n/no-missing-import
 import { LanguageClient, SettingMonitor, ExecuteCommandRequest } from 'vscode-languageclient/node';
 import { workspace, commands, window, type ExtensionContext } from 'vscode';
 import { ApiEvent, PublicApi } from './types';
@@ -19,7 +18,9 @@ let client: LanguageClient;
 export async function activate({ subscriptions }: ExtensionContext): Promise<PublicApi> {
 	const serverPath = path.join(__dirname, 'start-server.js');
 
-	const api = Object.assign(new EventEmitter(), { codeActionReady: false }) as PublicApi;
+	const api = Object.assign(new EventEmitter(), {
+		codeActionReady: false,
+	}) as PublicApi;
 
 	client = new LanguageClient(
 		'Stylelint',

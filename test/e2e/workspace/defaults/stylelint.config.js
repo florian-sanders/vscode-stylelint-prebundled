@@ -5,16 +5,20 @@ const config = {
 	overrides: [
 		{
 			files: ['lint.css', 'ignored.css'],
-			rules: { indentation: [4] },
+			rules: { 'color-hex-length': 'long', },
 		},
 		{
 			files: ['rule-doc.css'],
 			plugins: [require.resolve('./test-plugin')],
 			rules: {
-				indentation: [4],
+				'color-hex-length': 'long',
 				'color-no-invalid-hex': true,
 				'plugin/foo-bar': true,
 			},
+		},
+		{
+			files: ['restart.css'],
+			rules: { 'block-no-empty': true },
 		},
 	],
 };

@@ -11,12 +11,11 @@ import {
 	WorkDoneProgressReporter,
 } from 'vscode-languageserver';
 import type { TextDocument, TextEdit } from 'vscode-languageserver-textdocument';
-// eslint-disable-next-line n/no-missing-import
 import { TextDocuments } from 'vscode-languageserver/node';
 import * as LSP from 'vscode-languageserver-protocol';
 import { displayError, NotificationManager, CommandManager } from '../../utils/lsp/index';
 import { LintDiagnostics, StylelintRunner } from '../../utils/stylelint/index';
-import { getFixes } from '../../utils/documents/index';
+import { getEditInfo, getFixes } from '../../utils/documents/index';
 import { StylelintResolver } from '../../utils/packages/index';
 import { StylelintLanguageServer } from '../server';
 import {
@@ -32,6 +31,7 @@ const mockNotificationManager = NotificationManager as jest.MockedClass<typeof N
 const mockCommandManager = CommandManager as jest.MockedClass<typeof CommandManager>;
 const mockRunner = StylelintRunner as jest.Mock<StylelintRunner>;
 const mockGetFixes = getFixes as jest.MockedFunction<typeof getFixes>;
+const mockGetEditInfo = getEditInfo as jest.MockedFunction<typeof getEditInfo>;
 const mockResolver = StylelintResolver as jest.Mock<StylelintResolver>;
 const mockTextDocuments = TextDocuments as jest.Mock<TextDocuments<TextDocument>>;
 
@@ -260,7 +260,9 @@ describe('StylelintLanguageServer', () => {
 
 		await onInitializedHandler?.({});
 
-		expect(mockLogger.debug).toHaveBeenCalledWith('received onInitialized', { params: {} });
+		expect(mockLogger.debug).toHaveBeenCalledWith('received onInitialized', {
+			params: {},
+		});
 		expect(mockLogger.debug).not.toHaveBeenCalledWith(
 			'Registering DidChangeConfigurationNotification',
 		);
@@ -295,7 +297,9 @@ describe('StylelintLanguageServer', () => {
 
 		await onInitializedHandler?.({});
 
-		expect(mockLogger.debug).toHaveBeenCalledWith('received onInitialized', { params: {} });
+		expect(mockLogger.debug).toHaveBeenCalledWith('received onInitialized', {
+			params: {},
+		});
 		expect(mockLogger.debug).toHaveBeenCalledWith('Registering DidChangeConfigurationNotification');
 		expect(mockConnection.client.register).toHaveBeenCalledWith(
 			LSP.DidChangeConfigurationNotification.type,
@@ -711,7 +715,9 @@ describe('StylelintLanguageServer', () => {
 			{} as WorkDoneProgressReporter,
 		);
 
-		const withOptions = await getContext()?.lintDocument(document, { maxWarnings: 1 });
+		const withOptions = await getContext()?.lintDocument(document, {
+			maxWarnings: 1,
+		});
 		const withoutOptions = await getContext()?.lintDocument(document);
 
 		expect(withOptions).toStrictEqual(['test']);
@@ -787,7 +793,9 @@ describe('StylelintLanguageServer', () => {
 			{} as WorkDoneProgressReporter,
 		);
 
-		const results = await getContext()?.lintDocument(document, { maxWarnings: 1 });
+		const results = await getContext()?.lintDocument(document, {
+			maxWarnings: 1,
+		});
 
 		expect(results).toBeUndefined();
 		expect(mockDisplayError).toHaveBeenCalledWith(mockConnection, error);
@@ -818,7 +826,9 @@ describe('StylelintLanguageServer', () => {
 			{} as WorkDoneProgressReporter,
 		);
 
-		const withOptions = await getContext()?.getFixes(document, { maxWarnings: 1 });
+		const withOptions = await getContext()?.getFixes(document, {
+			maxWarnings: 1,
+		});
 		const withoutOptions = await getContext()?.getFixes(document);
 
 		expect(withOptions).toStrictEqual(['test']);
@@ -1229,5 +1239,43 @@ describe('StylelintLanguageServer', () => {
 		expect(() => server.start()).toThrowErrorMatchingInlineSnapshot(
 			`"Cannot transition from Disposed"`,
 		);
+	});
+
+	test('should allow modules to get edit info for documents using context.getEditInfo', async () => {
+		mockRunner.mockImplementation(() => ({}) as unknown as StylelintRunner);
+		mockGetEditInfo.mockImplementation(
+			() => ({ label: 'test' }) as unknown as ReturnType<typeof getEditInfo>,
+		);
+
+		const document = { uri: 'file:///test.css' } as TextDocument;
+		const [TestModule, getContext] = getContextModule();
+		const server = new StylelintLanguageServer({
+			connection: mockConnection,
+			modules: [TestModule],
+		});
+
+		server.start();
+
+		const onInitializeHandler = mockConnection.onInitialize.mock.calls[0][0];
+
+		await onInitializeHandler(
+			{ capabilities: {} } as LSP.InitializeParams,
+			{} as LSP.CancellationToken,
+			{} as WorkDoneProgressReporter,
+		);
+
+		const editInfo = getContext()?.getEditInfo(document, {
+			range: {
+				start: { line: 1, character: 1 },
+				end: { line: 1, character: 2 },
+			},
+			message: `Expected "#000" to be "#000000" (color-hex-length)`,
+			source: 'stylelint',
+			severity: LSP.DiagnosticSeverity.Error,
+			code: 'color-hex-length',
+		});
+
+		expect(editInfo).toStrictEqual({ label: 'test' });
+		expect(mockGetEditInfo.mock.calls).toMatchSnapshot();
 	});
 });

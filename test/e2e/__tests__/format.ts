@@ -1,26 +1,38 @@
-import path from 'path';
+import * as assert from 'node:assert/strict';
+import * as semver from 'semver';
+
 import { commands } from 'vscode';
-import { URI } from 'vscode-uri';
-import { ApiEvent } from '../../../src/extension/index';
+
+import { openDocument, closeAllEditors, setupSettings, sleep } from '../helpers';
 
 describe('Document formatting', () => {
-	it('should format document using formatting options', async () => {
-		const documentPath = path.resolve(workspaceDir, 'defaults/format.css');
+	setupSettings({ '[css]': { 'editor.defaultFormatter': 'stylelint.vscode-stylelint' } });
 
-		const eventPromise = waitForApiEvent(
-			ApiEvent.DidRegisterDocumentFormattingEditProvider,
-			({ uri }) => path.relative(documentPath, URI.parse(uri).fsPath) === '',
-		);
+	afterEach(async () => {
+		await closeAllEditors();
+	});
 
-		const editor = await openDocument(documentPath);
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	const isStylelint16 = semver.satisfies(require('stylelint/package.json').version, '>=16');
 
-		await eventPromise;
+	// Only Stylelint before 16 had formatting related rules
+	const pre16It = isStylelint16 ? it.skip : it;
+
+	pre16It('should format document using formatting options', async () => {
+		const editor = await openDocument('defaults/format.css');
 
 		editor.options.tabSize = 4;
 		editor.options.insertSpaces = false;
 
+		await sleep(1000); // HACK: Prevent flaky test.
 		await commands.executeCommand('editor.action.formatDocument');
 
-		expect(editor.document.getText()).toMatchSnapshot();
+		assert.equal(
+			editor.document.getText(),
+			`a {
+	color: #fff;
+}
+`,
+		);
 	});
 });
