@@ -1,3 +1,9 @@
+# Project archived
+
+This project is no longer necessary since the Zed Stylelint extension now fetches the Stylelint LSP directly from open-vsix: https://github.com/florian-sanders/zed-stylelint/issues/13
+
+The related npm package will soon be removed as well.
+
 # Disclaimer & acknowledgement
 
 This repo is a fork of [stylelint/vscode-stylelint](https://github.com/stylelint/vscode-stylelint).
